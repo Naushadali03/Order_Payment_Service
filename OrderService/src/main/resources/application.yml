@@ -1,0 +1,63 @@
+server:
+    port: 8081
+
+spring:
+    application:
+        name: OrderService
+    
+    datasource:
+        url: jdbc:postgresql://localhost:5432/orderdb
+        username: postgres
+        password: postgres
+        driver-class-name: org.postgresql.Driver
+    jpa:
+        hibernate:
+            ddl-auto: update
+        show-sql: true
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+                format-sql: true
+
+
+    data:
+        redis:
+            host: localhost
+            port: 6379
+            timeout: 60000
+            jedis:
+                pool:
+                    max-active: 8
+                    max-idle: 8
+                    min-active: 0
+
+    kafka:
+        bootstrap-server: 9092
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            properties:
+                spring.json.type.mapping: orderCreatedEvent:com.example.kafkaEvent.OrderCreatedEvent
+        consumer:
+            group-id: 
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "*"
+
+kafka:
+    topic:
+        order-events: order-events 
+
+
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
