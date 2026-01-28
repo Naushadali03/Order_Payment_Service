@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.common.protocol.types.Field.Str;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class OrderServiceImpl implements OrderService{
     private OrderRepository orderRepository;
 
     @Autowired
+    @Qualifier("redisTemplate")
     private RedisTemplate<String,Object> redisTemplate;
 
     @Autowired
@@ -65,10 +68,14 @@ public class OrderServiceImpl implements OrderService{
         return mapToResponse(saveOrder, "Order Create Sucessfully");
     }
 
-    private void cacheOrder(Order order){
-        String orderKey = "Order: "+order.getOrderId();
-        redisTemplate.opsForValue().set(orderKey, order,1,TimeUnit.HOURS);
-        log.info("Order cached in Redis with Key: {}",orderKey);
+
+    @Cacheable(value = "orders",key = "#orderId")
+    @Override
+    public OrderResponse getOrder(String orderId) {
+        log.info("Fetching order with ID: {}",orderId);
+        Order order = orderRepository.findByOrderId(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+        return mapToResponse(order, "Order retrieved successfully");
     }
 
     private OrderResponse mapToResponse(Order order,String message){
@@ -82,7 +89,15 @@ public class OrderServiceImpl implements OrderService{
             message);
     }
 
+     private void cacheOrder(Order order){
+        String orderKey = "Order: "+order.getOrderId();
+        redisTemplate.opsForValue().set(orderKey, order,1,TimeUnit.HOURS);
+        log.info("Order cached in Redis with Key: {}",orderKey);
+    }
+
+    
     public String generateOrderId(){
         return "ORD-"+UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
+
 }
