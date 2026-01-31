@@ -1,7 +1,11 @@
 package com.example.service.serviceImpl;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.protocol.types.Field.Str;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,6 +80,13 @@ public class OrderServiceImpl implements OrderService{
         Order order = orderRepository.findByOrderId(orderId)
             .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
         return mapToResponse(order, "Order retrieved successfully");
+    }
+
+    public List<OrderResponse> getAllOrders(){
+        log.info("Fetching all orders");
+        List<Order> orders = orderRepository.findAll();
+        return orders.stream().map(order->mapToResponse(order, "Order retrieved")).collect(Collectors.toList());
+        
     }
 
     private OrderResponse mapToResponse(Order order,String message){

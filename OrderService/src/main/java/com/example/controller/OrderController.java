@@ -1,5 +1,7 @@
 package com.example.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,5 +45,11 @@ public class OrderController {
         OrderResponse orderResponse = orderService.getOrder(orderId);
 
         return ResponseEntity.ok(orderResponse);
+    }
+    
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getAllOrders(){
+        log.info("Recieved Request to fetch all orders");
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 }
