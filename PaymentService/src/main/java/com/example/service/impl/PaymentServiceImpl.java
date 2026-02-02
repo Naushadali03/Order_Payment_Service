@@ -1,13 +1,18 @@
 package com.example.service.impl;
 
+import java.util.Random;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.constant.PaymentStatus;
 import com.example.entity.Payment;
 import com.example.kafkaEvents.OrderCreatedEvent;
+import com.example.kafkaEvents.PaymentFailedEvent;
+import com.example.kafkaEvents.PaymentSuccessEvent;
+import com.example.producer.PaymentEventProducer;
 import com.example.repository.PaymentRepository;
 import com.example.service.PaymentSerivice;
 
@@ -18,9 +23,21 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentServiceImpl implements PaymentSerivice{
 
     private final PaymentRepository paymentRepository;
+    private final RedisIdempotencyService idempotencyService;
+    private final PaymentEventProducer paymentEventProducer;
+    private final Random random;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository){
+    @Value("${payment.success-rate: 80}")
+    private int successRate;
+
+    @Value("${payment.processing-delay: 2000")
+    private Long processingDelay;
+
+    public PaymentServiceImpl(PaymentRepository paymentRepository, RedisIdempotencyService idempotencyService,PaymentEventProducer paymentEventProducer,Random random){
         this.paymentRepository=paymentRepository;
+        this.idempotencyService=idempotencyService;
+        this.paymentEventProducer=paymentEventProducer;
+        this.random=random;
     }
     
     @Override
@@ -36,9 +53,67 @@ public class PaymentServiceImpl implements PaymentSerivice{
         payment.setPaymentMethod("CREDIT_CARD");
         Payment savedPayment = paymentRepository.save(payment);
         log.info("Payment Record Created with ID: {}",savedPayment.getPaymentId());
+
+        try{
+            Thread.sleep(processingDelay);
+        }
+        catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+            log.info("Payment Processing Interupted", e);
+        }
+
+        boolean paymentProcess = simulatePaymentProcessing();
+
+        if(paymentProcess){
+            String transactionId = generateTransactionId();
+            savedPayment.setStatus(PaymentStatus.COMPLETED);
+            savedPayment.setTransactionId(transactionId);
+            paymentRepository.save(savedPayment);
+            log.info("PAYMENT SUCCESSFULL for order Id: {}, paymentId: {}",savedPayment.getOrderId(),savedPayment.getPaymentId());
+
+            idempotencyService.markAsProcessed(savedPayment.getOrderId(), savedPayment.getPaymentId());
+
+             PaymentSuccessEvent successEvent = new PaymentSuccessEvent(
+                savedPayment.getOrderId(),
+                savedPayment.getPaymentId(),
+                orderCreatedEvent.getCustomerId(),
+                orderCreatedEvent.getTotalAmount(),
+                transactionId
+            );
+            paymentEventProducer.sendPaymentSuccessEvents(successEvent);  
+        } else{
+            String failureReason = "Insufficient funds / Card declined";
+            savedPayment.setFailureReason(failureReason);
+            savedPayment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(savedPayment);
+            log.error("Payment FAILED for orderId: {}, reason: {}", orderCreatedEvent.getOrderId(), failureReason);
+
+            idempotencyService.markAsProcessed(orderCreatedEvent.getOrderId(), savedPayment.getPaymentId());
+
+            PaymentFailedEvent failedEvent = new PaymentFailedEvent(
+                orderCreatedEvent.getOrderId(),
+                savedPayment.getPaymentId(),
+                orderCreatedEvent.getCustomerId(),
+                orderCreatedEvent.getTotalAmount(),
+                failureReason
+            );
+
+            paymentEventProducer.sendPaymentFailedEvents(failedEvent);
+
+        }
+
+    }
+
+    private boolean simulatePaymentProcessing(){
+        int randomValue = random.nextInt(100);
+       return randomValue < successRate;
     }
 
     private String generatedPaymentId(){
         return "PAY-"+UUID.randomUUID().toString().substring(0,8).toUpperCase();
+    }
+
+    private String generateTransactionId(){
+        return "TXN-"+UUID.randomUUID().toString().substring(0,12).toUpperCase();
     }
 }
