@@ -18,3 +18,34 @@ spring:
                 dialect: org.hibernate.dialect.PostgreSQLDialect
                 format-sql: true
 
+    kafka:
+        bootstrap-servers: localhost:9092
+        consumer:
+            group-id: payment-service-group
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "*"
+                spring.json.type.mapping: orderCreatedEvent:com.example.kafkaEvents.OrderCreatedEvent
+            listener:
+                missing-topics-fatal: false
+            auto-offset-reset: earliest
+
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            # properties:
+            #     spring.json.type.mapping: paymentSuccessEvent:com.example.kafkaEvents.PaymentSuccessEvent
+
+
+
+kafka:
+    topic:
+        order-events: order-events
+        payment-events: payment-events
+
+payment:
+    success-rate: 80
+    processing-delay: 2000 
+
+
