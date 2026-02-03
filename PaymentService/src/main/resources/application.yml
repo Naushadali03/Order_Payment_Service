@@ -32,10 +32,10 @@ spring:
             auto-offset-reset: earliest
 
         producer:
-            key-serializer: org.apache.kafka.common.serialization.StringDeserializer
-            value-serializer: org.springframework.kafka.support.serializer.JsonDeserializer
-            # properties:
-            #     spring.json.type.mapping: paymentSuccessEvent:com.example.kafkaEvents.PaymentSuccessEvent
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer 
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            properties:
+                spring.json.type.mapping: paymentSuccessEvent:com.example.kafkaEvents.PaymentSuccessEvent
 
 
 

@@ -31,7 +31,7 @@ public class PaymentEventProducer {
         CompletableFuture<SendResult<String,Object>> future = kafkaTemplate.send(paymentEvents,events.getOrderId(),events);
 
         future.whenComplete((result,ex)->{
-                if(ex!=null){
+                if(ex==null){
                     log.info("Sent Successfully paymentSuccessEvent for orderId: {} to topic: {}",events.getOrderId(),paymentEvents);
                 }
                 else{
@@ -44,7 +44,7 @@ public class PaymentEventProducer {
         log.info("Publishing payment failed event for orderId: {}",event.getOrderId());
         CompletableFuture<SendResult<String,Object>> future = kafkaTemplate.send(paymentEvents,event.getOrderId(),event);
         future.whenComplete((result,ex)->{
-            if(ex!=null){
+            if(ex==null){
                 log.info("Sent successfully payment failed event for orderId: {} to topic: {}", event.getOrderId(),paymentEvents);
             }
             else{

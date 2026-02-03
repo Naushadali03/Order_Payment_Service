@@ -1,8 +1,10 @@
 package com.example.service.impl;
 
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,19 +27,18 @@ public class PaymentServiceImpl implements PaymentSerivice{
     private final PaymentRepository paymentRepository;
     private final RedisIdempotencyService idempotencyService;
     private final PaymentEventProducer paymentEventProducer;
-    private final Random random;
+    private final Random random = new Random();
 
     @Value("${payment.success-rate: 80}")
     private int successRate;
 
-    @Value("${payment.processing-delay: 2000")
+    @Value("${payment.processing-delay: 2000}")
     private Long processingDelay;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, RedisIdempotencyService idempotencyService,PaymentEventProducer paymentEventProducer,Random random){
+    public PaymentServiceImpl(PaymentRepository paymentRepository, RedisIdempotencyService idempotencyService,PaymentEventProducer paymentEventProducer){
         this.paymentRepository=paymentRepository;
         this.idempotencyService=idempotencyService;
         this.paymentEventProducer=paymentEventProducer;
-        this.random=random;
     }
     
     @Override
@@ -102,6 +103,25 @@ public class PaymentServiceImpl implements PaymentSerivice{
 
         }
 
+    }
+
+    @Override
+    public Payment getPaymentByOrderId(String orderId){
+       Payment payment = paymentRepository.findByOrderId(orderId)
+            .orElseThrow(() -> new RuntimeException("Payment not found for orderId: " + orderId));
+
+            return payment;
+    }
+
+    public Payment getPaymentById(String paymentId){
+        Payment payment = paymentRepository.findByPaymentId(paymentId)
+            .orElseThrow(() -> new RuntimeException("Payment not found for paymentId: " + paymentId));
+
+            return payment;
+    }
+
+    public List<Payment> getAllPayment(){
+        return paymentRepository.findAll();
     }
 
     private boolean simulatePaymentProcessing(){
