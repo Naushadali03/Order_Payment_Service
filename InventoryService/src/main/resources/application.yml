@@ -20,4 +20,40 @@ spring:
             hibernate:
                 dialect: org.hibernate.dialect.PostgreSQLDialect
                 format-sql: true
+    
+    kafka:
+        bootstrap-servers: localhost:9092
+        consumer:
+            group-id: inventory-service-group
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "*"
+                spring.json.type.mapping: paymentSuccessEvent:com.example.kafkaEvent.PaymentSuccessEvent
+            auto-offset-reset: earliest
+
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            properties:
+                spring.json.type.mapping: inventoryUpdatedEvent:com.example.kafkaEvent.InventoryUpdatedEvent
+            
+    data:
+        redis:
+            host: localhost
+            port: 6379
+            timeout: 60000
+            jedis:
+                pool:
+                    max-active: 8
+                    max-idle: 8
+                    min-idle: 0
+    cache:
+        type: redis
+        redis:
+            time-to-live: 3600000
+kafka:
+    topic:
+        payment-events: payment-events
+        inventory-events: inventory-events
 
