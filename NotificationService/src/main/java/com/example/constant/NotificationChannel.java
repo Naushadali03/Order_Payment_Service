@@ -1,4 +1,4 @@
-package com.example.entity;
+package com.example.constant;
 
 public enum NotificationChannel {
     EMAIL,
